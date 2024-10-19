@@ -1,0 +1,9 @@
+CREATE TABLE tb_todos(
+    id INTEGER,
+    title VARCHAR(255) NOT NULL,
+    status INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    CONSTRAINT todo_pk PRIMARY KEY(id)
+);
