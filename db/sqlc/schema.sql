@@ -7,3 +7,4 @@ CREATE TABLE tb_todos(
     completed_at TIMESTAMP,
     CONSTRAINT todo_pk PRIMARY KEY(id)
 );
+
