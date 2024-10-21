@@ -26,7 +26,7 @@ type Config struct {
 func GetConfig(ddl string) *Config {
 	return &Config{
 		DDL:    ddl,
-		dbPath: "db/db.db",
+		dbPath: filepath.Join("db", "db.db"),
 	}
 }
 
@@ -36,13 +36,13 @@ func (c *Config) StartConfig() error {
 	}
 
 	ctx := context.Background()
-	conn := c.initDB()
+	c.DB = c.initDB()
 
-	if _, err := conn.ExecContext(ctx, c.DDL); err != nil {
+	if _, err := c.DB.ExecContext(ctx, c.DDL); err != nil {
 		return err
 	}
 
-	c.Queries = db.New(conn)
+	c.Queries = db.New(c.DB)
 	c.Models = models.NewModels(c.Queries)
 
 	return nil
@@ -69,7 +69,7 @@ func (c *Config) connectToDB() *sql.DB {
 		} else {
 			return conn
 		}
-
+		count++
 		fmt.Println("backing off for 1 sec...")
 		time.Sleep(1 * time.Second)
 	}
@@ -89,11 +89,10 @@ func (c *Config) openDB() (*sql.DB, error) {
 }
 
 func (c *Config) dbExists() error {
-
 	if _, err := os.Stat(c.dbPath); err != nil {
 		log.Println("DB not found, creating db...")
 		path := strings.Split(c.dbPath, string(os.PathSeparator))
-		path = path[:2]
+		path = path[:len(path)-1]
 		err = os.MkdirAll(filepath.Join(path...), os.ModePerm)
 		if err != nil {
 			return err

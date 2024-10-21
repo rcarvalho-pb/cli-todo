@@ -11,13 +11,13 @@ var queries *db.Queries
 const dbTimeout = 10 * time.Second
 
 type Models struct {
-	Task *task
+	Task *Task
 }
 
 func NewModels(dbPool *db.Queries) *Models {
 	queries = dbPool
 
 	return &Models{
-		Task: &task{},
+		Task: &Task{},
 	}
 }

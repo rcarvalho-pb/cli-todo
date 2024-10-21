@@ -2,12 +2,16 @@ package models
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"time"
 
+	"github.com/aquasecurity/table"
 	"github.com/rcarvalho-pb/cli-todo/pkg/db"
 )
 
-type task struct {
+type Task struct {
 	ID          int64
 	Title       string
 	IsCompleted bool
@@ -15,15 +19,17 @@ type task struct {
 	CompletedAt time.Time
 }
 
-func (t *task) FromTBTask(task db.TbTask) {
+func (t *Task) FromTBTask(task db.TbTask) {
 	t.ID = task.ID
 	t.Title = task.Title
 	t.IsCompleted = task.IsCompleted
 	t.CreatedAt = task.CreatedAt
-	t.CompletedAt = task.CompletedAt
+	if task.CompletedAt.Valid {
+		t.CompletedAt = task.CompletedAt.Time
+	}
 }
 
-func GetAllTasks(t *task) ([]*task, error) {
+func (t Task) GetAllTasks() ([]*Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -32,9 +38,9 @@ func GetAllTasks(t *task) ([]*task, error) {
 		return nil, err
 	}
 
-	var tasks []*task
+	var tasks []*Task
 	for _, res := range result {
-		var task task
+		var task Task
 		task.FromTBTask(res)
 		tasks = append(tasks, &task)
 	}
@@ -42,7 +48,7 @@ func GetAllTasks(t *task) ([]*task, error) {
 	return tasks, nil
 }
 
-func (t *task) GetCompletedTasks() ([]*task, error) {
+func (t Task) GetUnfinishedTasks() ([]*Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -51,9 +57,9 @@ func (t *task) GetCompletedTasks() ([]*task, error) {
 		return nil, err
 	}
 
-	var tasks []*task
+	var tasks []*Task
 	for _, res := range result {
-		var task task
+		var task Task
 		task.FromTBTask(res)
 		tasks = append(tasks, &task)
 	}
@@ -62,7 +68,7 @@ func (t *task) GetCompletedTasks() ([]*task, error) {
 
 }
 
-func (t *task) GetAllFinishedTasks() ([]*task, error) {
+func (t Task) GetAllFinishedTasks() ([]*Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -71,9 +77,9 @@ func (t *task) GetAllFinishedTasks() ([]*task, error) {
 		return nil, err
 	}
 
-	var tasks []*task
+	var tasks []*Task
 	for _, res := range result {
-		var task task
+		var task Task
 		task.FromTBTask(res)
 		tasks = append(tasks, &task)
 	}
@@ -81,7 +87,7 @@ func (t *task) GetAllFinishedTasks() ([]*task, error) {
 	return tasks, nil
 }
 
-func (t *task) UpdateTask(id int64, title string) error {
+func (t Task) UpdateTask(id int64, title string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -96,7 +102,7 @@ func (t *task) UpdateTask(id int64, title string) error {
 
 }
 
-func (t *task) AddTask(title string) (*task, error) {
+func (t Task) AddTask(title string) (*Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -105,13 +111,13 @@ func (t *task) AddTask(title string) (*task, error) {
 		return nil, err
 	}
 
-	var task *task
+	var task Task
 	task.FromTBTask(result)
 
-	return task, nil
+	return &task, nil
 }
 
-func (t *task) ToggleTask(id int64) error {
+func (t Task) ToggleTask(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -120,22 +126,27 @@ func (t *task) ToggleTask(id int64) error {
 		return err
 	}
 
-	var toogleTaskParams db.ToogleTaskParams
+	fmt.Printf("%+v\n", res)
+
+	var toggleTaskParams db.ToogleTaskParams
+	toggleTaskParams.ID = id
 	if res.IsCompleted {
-		toogleTaskParams.IsCompleted = !res.IsCompleted
+		toggleTaskParams.IsCompleted = !res.IsCompleted
 	} else {
-		toogleTaskParams.IsCompleted = !res.IsCompleted
-		toogleTaskParams.CompletedAt = time.Now()
+		toggleTaskParams.IsCompleted = !res.IsCompleted
+		toggleTaskParams.CompletedAt = time.Now()
 	}
 
-	if err = queries.ToogleTask(ctx, toogleTaskParams); err != nil {
+	fmt.Printf("%+v\n", toggleTaskParams)
+
+	if err = queries.ToogleTask(ctx, toggleTaskParams); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (t *task) DeleteTaks(id int64) error {
+func (t Task) DeleteTaks(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -144,4 +155,25 @@ func (t *task) DeleteTaks(id int64) error {
 	}
 
 	return nil
+}
+
+func (t Task) Print(tasks []*Task) {
+	table := table.New(os.Stdout)
+	table.SetRowLines(false)
+	table.SetHeaders("#", "Título", "Completa?", "Criada Em", "Finalizada Em")
+
+	for _, task := range tasks {
+		fmt.Println(task.Title)
+		completed := "❌"
+		completedAt := "-"
+		if task.IsCompleted {
+			completedAt = task.CompletedAt.Format("02/01/2006 15:04:05")
+			completed = "✅"
+		}
+		fmt.Println(completedAt)
+
+		table.AddRow(strconv.Itoa(int(task.ID)), task.Title, completed, task.CreatedAt.Format("02/01/2006 15:04:05"), completedAt)
+	}
+
+	table.Render()
 }

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -13,5 +14,5 @@ type TbTask struct {
 	Title       string
 	IsCompleted bool
 	CreatedAt   time.Time
-	CompletedAt time.Time
+	CompletedAt sql.NullTime
 }
