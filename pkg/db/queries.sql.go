@@ -7,218 +7,209 @@ package db
 
 import (
 	"context"
-	"database/sql"
+	"time"
 )
 
-const completeTodo = `-- name: CompleteTodo :exec
-UPDATE tb_todos SET status = 2 WHERE id = ?
+const deleteTask = `-- name: DeleteTask :exec
+DELETE FROM tb_tasks WHERE id = ?
 `
 
-func (q *Queries) CompleteTodo(ctx context.Context, id sql.NullInt64) error {
-	_, err := q.db.ExecContext(ctx, completeTodo, id)
+func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteTask, id)
 	return err
 }
 
-const deleteTodo = `-- name: DeleteTodo :exec
-DELETE FROM tb_todos WHERE id = ?
+const findTaskById = `-- name: FindTaskById :one
+SELECT id, title, is_completed, created_at, completed_at FROM tb_tasks WHERE id = ?
 `
 
-func (q *Queries) DeleteTodo(ctx context.Context, id sql.NullInt64) error {
-	_, err := q.db.ExecContext(ctx, deleteTodo, id)
-	return err
-}
-
-const findTodoByTitle = `-- name: FindTodoByTitle :many
-SELECT id, title, status, created_at, modified_at, completed_at FROM tb_todos WHERE title LIKE CONCAT('%', ?, '%')
-`
-
-func (q *Queries) FindTodoByTitle(ctx context.Context, concat interface{}) ([]TbTodo, error) {
-	rows, err := q.db.QueryContext(ctx, findTodoByTitle, concat)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TbTodo
-	for rows.Next() {
-		var i TbTodo
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Status,
-			&i.CreatedAt,
-			&i.ModifiedAt,
-			&i.CompletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllFinishedTodos = `-- name: GetAllFinishedTodos :many
-SELECT id, title, status, created_at, modified_at, completed_at FROM tb_todos WHERE status = 2
-`
-
-func (q *Queries) GetAllFinishedTodos(ctx context.Context) ([]TbTodo, error) {
-	rows, err := q.db.QueryContext(ctx, getAllFinishedTodos)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TbTodo
-	for rows.Next() {
-		var i TbTodo
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Status,
-			&i.CreatedAt,
-			&i.ModifiedAt,
-			&i.CompletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllTodos = `-- name: GetAllTodos :many
-SELECT id, title, status, created_at, modified_at, completed_at FROM tb_todos
-`
-
-func (q *Queries) GetAllTodos(ctx context.Context) ([]TbTodo, error) {
-	rows, err := q.db.QueryContext(ctx, getAllTodos)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TbTodo
-	for rows.Next() {
-		var i TbTodo
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Status,
-			&i.CreatedAt,
-			&i.ModifiedAt,
-			&i.CompletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllUnfinishedTodos = `-- name: GetAllUnfinishedTodos :many
-SELECT id, title, status, created_at, modified_at, completed_at FROM tb_todos WHERE status <> 2
-`
-
-func (q *Queries) GetAllUnfinishedTodos(ctx context.Context) ([]TbTodo, error) {
-	rows, err := q.db.QueryContext(ctx, getAllUnfinishedTodos)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TbTodo
-	for rows.Next() {
-		var i TbTodo
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Status,
-			&i.CreatedAt,
-			&i.ModifiedAt,
-			&i.CompletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const newTodo = `-- name: NewTodo :one
-INSERT INTO tb_todos (title) VALUES (?) RETURNING id, title, status, created_at, modified_at, completed_at
-`
-
-func (q *Queries) NewTodo(ctx context.Context, title string) (TbTodo, error) {
-	row := q.db.QueryRowContext(ctx, newTodo, title)
-	var i TbTodo
+func (q *Queries) FindTaskById(ctx context.Context, id int64) (TbTask, error) {
+	row := q.db.QueryRowContext(ctx, findTaskById, id)
+	var i TbTask
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
-		&i.Status,
+		&i.IsCompleted,
 		&i.CreatedAt,
-		&i.ModifiedAt,
 		&i.CompletedAt,
 	)
 	return i, err
 }
 
-const reopenTodo = `-- name: ReopenTodo :exec
-UPDATE tb_todos SET status = 1 WHERE id = ?
+const findTaskByTitle = `-- name: FindTaskByTitle :many
+SELECT id, title, is_completed, created_at, completed_at FROM tb_tasks WHERE title LIKE CONCAT('%', ?, '%')
 `
 
-func (q *Queries) ReopenTodo(ctx context.Context, id sql.NullInt64) error {
-	_, err := q.db.ExecContext(ctx, reopenTodo, id)
+func (q *Queries) FindTaskByTitle(ctx context.Context, concat interface{}) ([]TbTask, error) {
+	rows, err := q.db.QueryContext(ctx, findTaskByTitle, concat)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TbTask
+	for rows.Next() {
+		var i TbTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllFinishedTasks = `-- name: GetAllFinishedTasks :many
+SELECT id, title, is_completed, created_at, completed_at FROM tb_tasks WHERE is_completed = 1
+`
+
+func (q *Queries) GetAllFinishedTasks(ctx context.Context) ([]TbTask, error) {
+	rows, err := q.db.QueryContext(ctx, getAllFinishedTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TbTask
+	for rows.Next() {
+		var i TbTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllTasks = `-- name: GetAllTasks :many
+SELECT id, title, is_completed, created_at, completed_at FROM tb_tasks
+`
+
+func (q *Queries) GetAllTasks(ctx context.Context) ([]TbTask, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TbTask
+	for rows.Next() {
+		var i TbTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllUnfinishedTasks = `-- name: GetAllUnfinishedTasks :many
+SELECT id, title, is_completed, created_at, completed_at FROM tb_tasks WHERE is_completed = 0
+`
+
+func (q *Queries) GetAllUnfinishedTasks(ctx context.Context) ([]TbTask, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUnfinishedTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TbTask
+	for rows.Next() {
+		var i TbTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const newTask = `-- name: NewTask :one
+INSERT INTO tb_tasks (title) VALUES (?) RETURNING id, title, is_completed, created_at, completed_at
+`
+
+func (q *Queries) NewTask(ctx context.Context, title string) (TbTask, error) {
+	row := q.db.QueryRowContext(ctx, newTask, title)
+	var i TbTask
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.IsCompleted,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const toogleTask = `-- name: ToogleTask :exec
+UPDATE tb_tasks SET is_completed = ?, completed_at = ? WHERE id = ? RETURNING id, title, is_completed, created_at, completed_at
+`
+
+type ToogleTaskParams struct {
+	IsCompleted bool
+	CompletedAt time.Time
+	ID          int64
+}
+
+func (q *Queries) ToogleTask(ctx context.Context, arg ToogleTaskParams) error {
+	_, err := q.db.ExecContext(ctx, toogleTask, arg.IsCompleted, arg.CompletedAt, arg.ID)
 	return err
 }
 
-const startTodo = `-- name: StartTodo :exec
-UPDATE tb_todos SET status = 1 WHERE id = ?
+const updateTaskTitle = `-- name: UpdateTaskTitle :exec
+UPDATE tb_tasks SET title = ? WHERE id = ? RETURNING id, title, is_completed, created_at, completed_at
 `
 
-func (q *Queries) StartTodo(ctx context.Context, id sql.NullInt64) error {
-	_, err := q.db.ExecContext(ctx, startTodo, id)
-	return err
-}
-
-const updateTodoModifiedDate = `-- name: UpdateTodoModifiedDate :exec
-UPDATE tb_todos SET modified_at = CURRENT_TIMESTAMP WHERE id = ?
-`
-
-func (q *Queries) UpdateTodoModifiedDate(ctx context.Context, id sql.NullInt64) error {
-	_, err := q.db.ExecContext(ctx, updateTodoModifiedDate, id)
-	return err
-}
-
-const updateTodoTitle = `-- name: UpdateTodoTitle :exec
-UPDATE tb_todos SET title = ? WHERE id = ?
-`
-
-type UpdateTodoTitleParams struct {
+type UpdateTaskTitleParams struct {
 	Title string
-	ID    sql.NullInt64
+	ID    int64
 }
 
-func (q *Queries) UpdateTodoTitle(ctx context.Context, arg UpdateTodoTitleParams) error {
-	_, err := q.db.ExecContext(ctx, updateTodoTitle, arg.Title, arg.ID)
+func (q *Queries) UpdateTaskTitle(ctx context.Context, arg UpdateTaskTitleParams) error {
+	_, err := q.db.ExecContext(ctx, updateTaskTitle, arg.Title, arg.ID)
 	return err
 }

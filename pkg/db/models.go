@@ -5,14 +5,13 @@
 package db
 
 import (
-	"database/sql"
+	"time"
 )
 
-type TbTodo struct {
-	ID          sql.NullInt64
+type TbTask struct {
+	ID          int64
 	Title       string
-	Status      sql.NullInt64
-	CreatedAt   sql.NullTime
-	ModifiedAt  sql.NullTime
-	CompletedAt sql.NullTime
+	IsCompleted bool
+	CreatedAt   time.Time
+	CompletedAt time.Time
 }

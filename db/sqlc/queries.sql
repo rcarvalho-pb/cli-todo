@@ -1,34 +1,27 @@
--- name: GetAllTodos :many
-SELECT * FROM tb_todos;
+-- name: GetAllTasks :many
+SELECT * FROM tb_tasks;
 
--- name: GetAllUnfinishedTodos :many
-SELECT * FROM tb_todos WHERE status <> 2;
+-- name: GetAllUnfinishedTasks :many
+SELECT * FROM tb_tasks WHERE is_completed = 0;
 
--- name: GetAllFinishedTodos :many
-SELECT * FROM tb_todos WHERE status = 2;
+-- name: GetAllFinishedTasks :many
+SELECT * FROM tb_tasks WHERE is_completed = 1;
 
--- name: NewTodo :one
-INSERT INTO tb_todos (title) VALUES (?) RETURNING *;
+-- name: NewTask :one
+INSERT INTO tb_tasks (title) VALUES (?) RETURNING *;
 
--- name: DeleteTodo :exec
-DELETE FROM tb_todos WHERE id = ?;
+-- name: DeleteTask :exec
+DELETE FROM tb_tasks WHERE id = ?;
 
--- name: FindTodoByTitle :many
-SELECT * FROM tb_todos WHERE title LIKE CONCAT('%', ?, '%');
+-- name: FindTaskByTitle :many
+SELECT * FROM tb_tasks WHERE title LIKE CONCAT('%', ?, '%');
 
--- name: UpdateTodoTitle :exec
-UPDATE tb_todos SET title = ? WHERE id = ?;
+-- name: FindTaskById :one
+SELECT * FROM tb_tasks WHERE id = ?;
 
--- name: UpdateTodoModifiedDate :exec
-UPDATE tb_todos SET modified_at = CURRENT_TIMESTAMP WHERE id = ?;
+-- name: UpdateTaskTitle :exec
+UPDATE tb_tasks SET title = ? WHERE id = ? RETURNING *;
 
--- name: CompleteTodo :exec
-UPDATE tb_todos SET status = 2 WHERE id = ?;
-
--- name: ReopenTodo :exec
-UPDATE tb_todos SET status = 1 WHERE id = ?;
-
--- name: StartTodo :exec
-UPDATE tb_todos SET status = 1 WHERE id = ?;
-
+-- name: ToogleTask :exec
+UPDATE tb_tasks SET is_completed = ?, completed_at = ? WHERE id = ? RETURNING *;
 

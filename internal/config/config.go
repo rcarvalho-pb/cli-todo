@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rcarvalho-pb/cli-todo/internal/models"
 	"github.com/rcarvalho-pb/cli-todo/pkg/db"
 )
 
@@ -19,13 +20,13 @@ type Config struct {
 	dbPath  string
 	DB      *sql.DB
 	Queries *db.Queries
+	Models  *models.Models
 }
 
 func GetConfig(ddl string) *Config {
-	dbPath := os.Getenv("DB_PATH")
 	return &Config{
 		DDL:    ddl,
-		dbPath: dbPath,
+		dbPath: "db/db.db",
 	}
 }
 
@@ -42,6 +43,7 @@ func (c *Config) StartConfig() error {
 	}
 
 	c.Queries = db.New(conn)
+	c.Models = models.NewModels(c.Queries)
 
 	return nil
 }
@@ -87,6 +89,7 @@ func (c *Config) openDB() (*sql.DB, error) {
 }
 
 func (c *Config) dbExists() error {
+
 	if _, err := os.Stat(c.dbPath); err != nil {
 		log.Println("DB not found, creating db...")
 		path := strings.Split(c.dbPath, string(os.PathSeparator))
