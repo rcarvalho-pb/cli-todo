@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -24,9 +23,13 @@ type Config struct {
 }
 
 func GetConfig(ddl string) *Config {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return &Config{
 		DDL:    ddl,
-		dbPath: filepath.Join("db", "db.db"),
+		dbPath: filepath.Join(dir, "db.db"),
 	}
 }
 
@@ -91,13 +94,6 @@ func (c *Config) openDB() (*sql.DB, error) {
 func (c *Config) dbExists() error {
 	if _, err := os.Stat(c.dbPath); err != nil {
 		log.Println("DB not found, creating db...")
-		path := strings.Split(c.dbPath, string(os.PathSeparator))
-		path = path[:len(path)-1]
-		err = os.MkdirAll(filepath.Join(path...), os.ModePerm)
-		if err != nil {
-			return err
-		}
-
 		_, err = os.Create(c.dbPath)
 
 		log.Println("DB created!")

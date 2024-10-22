@@ -11,7 +11,6 @@ import (
 var ddl string
 
 func main() {
-
 	config := config.GetConfig(ddl)
 
 	config.StartConfig()
