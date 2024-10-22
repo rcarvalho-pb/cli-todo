@@ -7,7 +7,7 @@ package db
 
 import (
 	"context"
-	"time"
+	"database/sql"
 )
 
 const deleteTask = `-- name: DeleteTask :exec
@@ -168,30 +168,22 @@ func (q *Queries) GetAllUnfinishedTasks(ctx context.Context) ([]TbTask, error) {
 	return items, nil
 }
 
-const newTask = `-- name: NewTask :one
-INSERT INTO tb_tasks (title) VALUES (?) RETURNING id, title, is_completed, created_at, completed_at
+const newTask = `-- name: NewTask :exec
+INSERT INTO tb_tasks (title) VALUES (?)
 `
 
-func (q *Queries) NewTask(ctx context.Context, title string) (TbTask, error) {
-	row := q.db.QueryRowContext(ctx, newTask, title)
-	var i TbTask
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.IsCompleted,
-		&i.CreatedAt,
-		&i.CompletedAt,
-	)
-	return i, err
+func (q *Queries) NewTask(ctx context.Context, title string) error {
+	_, err := q.db.ExecContext(ctx, newTask, title)
+	return err
 }
 
 const toogleTask = `-- name: ToogleTask :exec
-UPDATE tb_tasks SET is_completed = ?, completed_at = ? WHERE id = ? RETURNING id, title, is_completed, created_at, completed_at
+UPDATE tb_tasks SET is_completed = ?, completed_at = ? WHERE id = ?
 `
 
 type ToogleTaskParams struct {
 	IsCompleted bool
-	CompletedAt time.Time
+	CompletedAt sql.NullTime
 	ID          int64
 }
 
@@ -201,7 +193,7 @@ func (q *Queries) ToogleTask(ctx context.Context, arg ToogleTaskParams) error {
 }
 
 const updateTaskTitle = `-- name: UpdateTaskTitle :exec
-UPDATE tb_tasks SET title = ? WHERE id = ? RETURNING id, title, is_completed, created_at, completed_at
+UPDATE tb_tasks SET title = ? WHERE id = ?
 `
 
 type UpdateTaskTitleParams struct {
