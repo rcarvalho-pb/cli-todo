@@ -17,6 +17,5 @@ func main() {
 	config.StartConfig()
 	defer config.DB.Close()
 
-	cmdFlags := commands.NewCmdFlags()
-	cmdFlags.Execute(config.Models.Task)
+	commands.Execute(config.Models)
 }

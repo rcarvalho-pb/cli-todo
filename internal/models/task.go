@@ -2,7 +2,9 @@ package models
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"errors"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -91,6 +93,15 @@ func (t Task) UpdateTask(id int64, title string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
+	res, err := queries.FindTaskById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if res.IsCompleted {
+		return errors.New("can't change title of tasks already completed")
+	}
+
 	if err := queries.UpdateTaskTitle(ctx, db.UpdateTaskTitleParams{
 		Title: title,
 		ID:    id,
@@ -102,19 +113,15 @@ func (t Task) UpdateTask(id int64, title string) error {
 
 }
 
-func (t Task) AddTask(title string) (*Task, error) {
+func (t Task) AddTask(title string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	result, err := queries.NewTask(ctx, title)
-	if err != nil {
-		return nil, err
+	if err := queries.NewTask(ctx, title); err != nil {
+		return err
 	}
 
-	var task Task
-	task.FromTBTask(result)
-
-	return &task, nil
+	return nil
 }
 
 func (t Task) ToggleTask(id int64) error {
@@ -126,18 +133,21 @@ func (t Task) ToggleTask(id int64) error {
 		return err
 	}
 
-	fmt.Printf("%+v\n", res)
-
 	var toggleTaskParams db.ToogleTaskParams
 	toggleTaskParams.ID = id
 	if res.IsCompleted {
 		toggleTaskParams.IsCompleted = !res.IsCompleted
+		toggleTaskParams.CompletedAt = sql.NullTime{
+			Time:  time.Time{},
+			Valid: false,
+		}
 	} else {
 		toggleTaskParams.IsCompleted = !res.IsCompleted
-		toggleTaskParams.CompletedAt = time.Now()
+		toggleTaskParams.CompletedAt = sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		}
 	}
-
-	fmt.Printf("%+v\n", toggleTaskParams)
 
 	if err = queries.ToogleTask(ctx, toggleTaskParams); err != nil {
 		return err
@@ -150,6 +160,15 @@ func (t Task) DeleteTaks(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
+	res, err := queries.FindTaskById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if res.IsCompleted {
+		return errors.New("can't delete tasks already completed")
+	}
+
 	if err := queries.DeleteTask(ctx, id); err != nil {
 		return err
 	}
@@ -157,23 +176,48 @@ func (t Task) DeleteTaks(id int64) error {
 	return nil
 }
 
-func (t Task) Print(tasks []*Task) {
+func (t Task) printList(tasks []*Task) {
 	table := table.New(os.Stdout)
 	table.SetRowLines(false)
 	table.SetHeaders("#", "Título", "Completa?", "Criada Em", "Finalizada Em")
 
 	for _, task := range tasks {
-		fmt.Println(task.Title)
 		completed := "❌"
 		completedAt := "-"
 		if task.IsCompleted {
 			completedAt = task.CompletedAt.Format("02/01/2006 15:04:05")
 			completed = "✅"
 		}
-		fmt.Println(completedAt)
 
 		table.AddRow(strconv.Itoa(int(task.ID)), task.Title, completed, task.CreatedAt.Format("02/01/2006 15:04:05"), completedAt)
 	}
 
 	table.Render()
+}
+
+func (t Task) ListAll() {
+	tasks, err := t.GetAllTasks()
+	if err != nil {
+		log.Fatal("Error getting all tasks")
+	}
+
+	t.printList(tasks)
+}
+
+func (t Task) ListAllFinished() {
+	tasks, err := t.GetAllFinishedTasks()
+	if err != nil {
+		log.Fatal("Error getting all unfinished tasks")
+	}
+
+	t.printList(tasks)
+}
+
+func (t Task) ListAllUnfinished() {
+	tasks, err := t.GetUnfinishedTasks()
+	if err != nil {
+		log.Fatal("Error getting all unfinished tasks")
+	}
+
+	t.printList(tasks)
 }
