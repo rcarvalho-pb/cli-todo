@@ -70,6 +70,25 @@ func (t Task) GetUnfinishedTasks() ([]*Task, error) {
 
 }
 
+func (t Task) GetTasksByTitle(title string) ([]*Task, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	result, err := queries.FindTaskByTitle(ctx, title)
+	if err != nil {
+		return nil, err
+	}
+
+	var tasks []*Task
+	for _, res := range result {
+		var task Task
+		task.FromTBTask(res)
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
+}
+
 func (t Task) GetAllFinishedTasks() ([]*Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -217,6 +236,15 @@ func (t Task) ListAllUnfinished() {
 	tasks, err := t.GetUnfinishedTasks()
 	if err != nil {
 		log.Fatal("Error getting all unfinished tasks")
+	}
+
+	t.printList(tasks)
+}
+
+func (t Task) ListAllTasksByTitle(title string) {
+	tasks, err := t.GetTasksByTitle(title)
+	if err != nil {
+		log.Fatal("Error getting all tasks by title")
 	}
 
 	t.printList(tasks)

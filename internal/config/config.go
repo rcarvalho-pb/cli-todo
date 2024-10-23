@@ -95,7 +95,7 @@ func (c *Config) openDB() (*sql.DB, error) {
 
 func (c *Config) dbExists() error {
 	if _, err := os.Stat(c.dbPath); err != nil {
-		log.Println("DB not found, creating db...")
+		log.Printf("DB not found in %s, creating db...\n", c.dbPath)
 		_, err = os.Create(c.dbPath)
 
 		log.Println("DB created!")

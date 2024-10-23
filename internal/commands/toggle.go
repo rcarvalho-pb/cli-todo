@@ -27,5 +27,5 @@ var toggleCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
+	rootCmd.AddCommand(toggleCmd)
 }

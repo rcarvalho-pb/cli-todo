@@ -6,12 +6,18 @@ import (
 
 var all bool
 var finished bool
+var sourceTitle string
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all tasks",
 
 	Run: func(cmd *cobra.Command, args []string) {
+		if sourceTitle != "" {
+			model.Task.ListAllTasksByTitle(sourceTitle)
+			return
+		}
+
 		if all {
 			model.Task.ListAll()
 			return
@@ -29,5 +35,6 @@ var listCmd = &cobra.Command{
 func init() {
 	listCmd.Flags().BoolVarP(&all, "all", "a", false, "show all tasks")
 	listCmd.Flags().BoolVarP(&finished, "finished", "f", false, "show all finished tasks")
+	listCmd.Flags().StringVarP(&sourceTitle, "title", "t", "", "show all tasks with matching title")
 	rootCmd.AddCommand(listCmd)
 }
