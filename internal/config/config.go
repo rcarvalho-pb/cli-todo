@@ -23,13 +23,15 @@ type Config struct {
 }
 
 func GetConfig(ddl string) *Config {
-	dir, err := os.Getwd()
+	dir, err := os.Executable()
 	if err != nil {
 		log.Fatal(err)
 	}
+	execDir := filepath.Dir(dir)
+
 	return &Config{
 		DDL:    ddl,
-		dbPath: filepath.Join(dir, "db.db"),
+		dbPath: filepath.Join(execDir, "db.db"),
 	}
 }
 
